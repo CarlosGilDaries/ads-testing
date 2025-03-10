@@ -6,7 +6,59 @@ var player = videojs('my-video', {}, function() {
     player.ads();
 
     let midrollPlayed = false;
+    let postRoll = false;
     let tiempoGuardado = 0; // Variable para guardar el tiempo antes del midroll
+
+    // Para forzar el reinicio al darle a play después del postroll
+    player.on('contentended', function() {
+        player.one('play', function() {
+                console.log('Reiniciando');
+                player.currentTime(0);
+                player.play();
+        });
+    }); 
+
+    player.on('adstart', function() {
+        console.log("Anuncio iniciado");
+    
+        // Crear botón de "Saltar anuncio"
+        var skipButton = document.createElement('button');
+        skipButton.innerText = "Saltar anuncio";
+        skipButton.style.position = "absolute";
+        skipButton.style.bottom = "40px";
+        skipButton.style.right = "20px";
+        skipButton.style.padding = "10px";
+        skipButton.style.background = "rgba(0, 0, 0, 0.7)";
+        skipButton.style.color = "white";
+        skipButton.style.border = "none";
+        skipButton.style.cursor = "pointer";
+        skipButton.style.display = "none";
+    
+        player.el().appendChild(skipButton);
+    
+        // Mostrar botón después de 5 segundos
+        setTimeout(function() {
+            skipButton.style.display = "block";
+        }, 5000);
+    
+        // Al hacer clic en el botón, saltar el anuncio
+        skipButton.addEventListener('click', function() {
+            console.log("Anuncio saltado");
+            player.ads.endLinearAdMode();
+            skipButton.remove();
+
+            if (postRoll) {
+                player.src({ src: "video/mp4/oceans.mp4", type:"video/mp4" });
+                player.trigger('ended');
+            }
+        });
+    
+        // Remover el botón cuando termine el anuncio
+        player.on('adend', function() {
+            console.log("Anuncio terminado");
+            skipButton.remove();
+        });
+    });
 
     // PREROLL: Mostrar anuncio antes de iniciar el video
     player.on('readyforpreroll', function() {
@@ -55,9 +107,8 @@ var player = videojs('my-video', {}, function() {
 
     //POSTROLL: Anuncio al finalizar el vídeo
     player.on('contentended', function() {    
-        player.currentTime(0);
-
         player.on('readyforpostroll', function() {
+            postRoll = true;
             player.ads.startLinearAdMode();
             player.src({ src: "video/ads/sprite.mp4", type: "video/mp4" });
 
@@ -68,9 +119,7 @@ var player = videojs('my-video', {}, function() {
             player.one('adended', function() {
                 player.ads.endLinearAdMode();
                 player.src({ src: "video/mp4/oceans.mp4", type:"video/mp4" });
-                player.currentTime(0);
-                player.trigger('ended');
-                player.pause();          
+                player.trigger('ended');         
             });
         });
     });
