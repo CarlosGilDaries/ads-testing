@@ -23,7 +23,7 @@ var player = videojs('my-video', {}, function() {
     
         // Crear botón de "Saltar anuncio"
         var skipButton = document.createElement('button');
-        skipButton.innerText = "Saltar anuncio";
+        skipButton.innerText = "Saltar en 5";
         skipButton.style.position = "absolute";
         skipButton.style.bottom = "40px";
         skipButton.style.right = "20px";
@@ -32,16 +32,33 @@ var player = videojs('my-video', {}, function() {
         skipButton.style.color = "white";
         skipButton.style.border = "none";
         skipButton.style.cursor = "pointer";
-        skipButton.style.display = "none";
+        skipButton.style.display = "block";
+        skipButton.disabled = true;
     
         player.el().appendChild(skipButton);
     
-        // Mostrar botón después de 5 segundos
-        setTimeout(function() {
-            skipButton.style.display = "block";
-        }, 5000);
-    
-        // Al hacer clic en el botón, saltar el anuncio
+        // Iniciar cuenta atrás del skipButton
+        var countdown = 5;
+        var countdownInterval;
+
+        // Función para iniciar o reiniciar la cuenta atrás
+        function startCountdown() {
+            countdownInterval = setInterval(function() {
+                if (!player.paused()) {  // Solo contar si el anuncio no está pausado
+                    countdown--;
+                    skipButton.innerText = "Saltar en " + countdown;
+                    if (countdown === 0) {
+                        clearInterval(countdownInterval);
+                        skipButton.innerText = "Saltar anuncio";
+                        skipButton.disabled = false;
+                    }
+                }
+            }, 1000);
+        }
+
+        startCountdown();
+
+        // Saltar anuncio
         skipButton.addEventListener('click', function() {
             console.log("Anuncio saltado");
             player.ads.endLinearAdMode();
@@ -49,14 +66,27 @@ var player = videojs('my-video', {}, function() {
 
             if (postRoll) {
                 player.src({ src: "video/mp4/oceans.mp4", type:"video/mp4" });
-                player.trigger('ended');
+                player.trigger('ended'); 
             }
         });
-    
-        // Remover el botón cuando termine el anuncio
+
+        // Eliminar el botón cuando termine el anuncio
         player.on('adend', function() {
             console.log("Anuncio terminado");
             skipButton.remove();
+            clearInterval(countdownInterval);  // Limpiar el intervalo al finalizar el anuncio
+        });
+
+        // Detener el contador cuando el anuncio está pausado
+        player.on('pause', function() {
+            clearInterval(countdownInterval);  
+        });
+
+        // Reiniciar la cuenta atrás si el anuncio se reanuda
+        player.on('play', function() {
+            if (!skipButton.disabled) {
+                startCountdown();  
+            }
         });
     });
 
